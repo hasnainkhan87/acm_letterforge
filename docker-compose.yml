@@ -1,0 +1,12 @@
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    ports: ["8000:8000"]
+    volumes: ["./data:/app/storage", "./backend:/app"]
+  frontend:
+    build: ./frontend
+    ports: ["5173:5173"]
+    volumes: ["./frontend/src:/app/src"]
+    environment: [VITE_API_TARGET=http://backend:8000]
+    depends_on: [backend]

@@ -1,0 +1,5 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+:root { color-scheme: dark; }  /* native dropdowns, scrollbars and date pickers follow the dark theme */
+body { @apply font-sans text-[15px] text-main antialiased; background: radial-gradient(1100px 480px at 50% -8%, rgba(91, 75, 219, .35), transparent 70%), #0F0A2A; background-attachment: fixed; }
+h1, h2, h3 { @apply font-serif; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
