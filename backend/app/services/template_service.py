@@ -76,6 +76,14 @@ def build_placeholder(path: str, title: str):
     h = d.sections[0].header.paragraphs[0]; h.text = title; h.alignment = 1
     fill_template_body(d); tighten_margins(d); d.save(path)
 
+def _has_header_image(path) -> bool:
+    """True if the .docx header references an image (i.e. a real letterhead, not a text-only placeholder)."""
+    try:
+        with zipfile.ZipFile(path) as z:
+            return any(re.match(r"word/_rels/header\d*\.xml\.rels$", n) and b"media/" in z.read(n) for n in z.namelist())
+    except Exception:
+        return False
+
 def copy_default_templates():
     """First start with an empty /data volume: copy the official templates shipped inside the image.
     Existing files are never overwritten."""
@@ -85,7 +93,9 @@ def copy_default_templates():
     dst = Path(storage.path("templates"))
     if src.is_dir() and src.resolve() != dst.resolve():
         for f in src.glob("*.docx"):
-            if not (dst / f.name).exists(): shutil.copy2(f, dst / f.name)
+            d = dst / f.name
+            # copy when missing, or upgrade a placeholder (no header image) to the shipped letterhead that has one
+            if not d.exists() or (_has_header_image(f) and not _has_header_image(d)): shutil.copy2(f, d)
 
 def seed(db: Session):
     copy_default_templates()

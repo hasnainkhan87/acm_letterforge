@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Res
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from . import models, schemas
-from .services import ai_service as ai, document_service, template_service, signature_service
+from .services import ai_service as ai, document_service, template_service, signature_service, contact_service
 from .db import Base, engine, get_db, SessionLocal
 from .config import settings
 from .services.storage_service import storage
@@ -33,6 +33,7 @@ def startup():
             db.add_all([models.Contact(name="Pratheeksha", position="Chairperson", organization="ACM,NMAMIT"),
                         models.Contact(name="Mr Krishnaraj Rao", position="Faculty Coordinator", organization="ACM,NMAMIT")])
             db.commit()
+        contact_service.seed_hods(db)  # all HODs; upserts on every startup, never touches contacts you added
 
 # ---- Templates (upload route = hook for future custom/OCR templates)
 @app.get("/api/templates", response_model=list[schemas.TemplateOut])
