@@ -76,7 +76,19 @@ def build_placeholder(path: str, title: str):
     h = d.sections[0].header.paragraphs[0]; h.text = title; h.alignment = 1
     fill_template_body(d); tighten_margins(d); d.save(path)
 
+def copy_default_templates():
+    """First start with an empty /data volume: copy the official templates shipped inside the image.
+    Existing files are never overwritten."""
+    import shutil
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[2] / "storage" / "templates"
+    dst = Path(storage.path("templates"))
+    if src.is_dir() and src.resolve() != dst.resolve():
+        for f in src.glob("*.docx"):
+            if not (dst / f.name).exists(): shutil.copy2(f, dst / f.name)
+
 def seed(db: Session):
+    copy_default_templates()
     for org, (left, right) in ORGS.items():
         name, key = f"{org.upper()} Letterhead", f"templates/{org}.docx"
         row = db.query(models.Template).filter_by(name=name).first()
@@ -103,7 +115,9 @@ def get_or_404(db: Session, tid: int) -> models.Template:
 def validate_upload(data: bytes):
     """Reject uploads missing the required placeholders so a bad template fails early."""
     import io
-    xml = zipfile.ZipFile(io.BytesIO(data))
+    try: xml = zipfile.ZipFile(io.BytesIO(data))
+    except zipfile.BadZipFile: raise ValueError("Not a valid .docx file")
+    if "word/document.xml" not in xml.namelist(): raise ValueError("Not a valid .docx file")
     text_ = "".join(xml.read(n).decode("utf8", "ignore") for n in xml.namelist() if n.endswith(".xml"))
     missing = [t for t in ("subject", "body") if t not in text_]
     if missing: raise ValueError(f"Template is missing placeholders: {missing}")

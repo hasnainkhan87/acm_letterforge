@@ -1,4 +1,4 @@
-import io, logging, os, shutil, subprocess, tempfile
+import io, logging, os, shutil, subprocess, sys, tempfile
 from datetime import date
 from pathlib import Path
 from docxtpl import DocxTemplate, InlineImage
@@ -54,19 +54,27 @@ def _soffice() -> str | None:
         if c and os.path.exists(c): return c
 
 def docx_to_pdf(docx: bytes) -> bytes | None:
-    """High-fidelity conversion via LibreOffice, or MS Word (docx2pdf) on Windows. None if neither exists."""
-    with tempfile.TemporaryDirectory() as d:
-        src, out = Path(d) / "l.docx", Path(d) / "l.pdf"; src.write_bytes(docx)
+    """DOCX -> PDF via LibreOffice (Linux/Docker path) or MS Word/docx2pdf on Windows dev machines.
+    Returns None if conversion is unavailable or fails, so callers can fall back."""
+    log = logging.getLogger("uvicorn.error")
+    with tempfile.TemporaryDirectory(prefix="lf-") as d:  # unique per request, removed on success AND failure
+        src, out = Path(d) / "letter.docx", Path(d) / "letter.pdf"; src.write_bytes(docx)
         exe = _soffice()
         try:
             if exe:
-                subprocess.run([exe, "--headless", "--convert-to", "pdf", "--outdir", d, str(src)], check=True, timeout=120, capture_output=True)
-            else:
+                profile = (Path(d) / "lo-profile").as_uri()  # private profile: no lock clashes between requests, works as non-root
+                r = subprocess.run([exe, f"-env:UserInstallation={profile}", "--headless", "--norestore",
+                                    "--convert-to", "pdf", "--outdir", d, str(src)], timeout=120, capture_output=True)
+                if r.returncode != 0 or not out.exists():
+                    raise RuntimeError(r.stderr.decode("utf8", "ignore")[-300:] or "soffice produced no output")
+            elif sys.platform == "win32":
                 import pythoncom; pythoncom.CoInitialize()
                 from docx2pdf import convert; convert(str(src), str(out))
+            else:
+                raise RuntimeError("LibreOffice (soffice) not found on PATH")
             return out.read_bytes()
         except Exception as e:
-            logging.getLogger("uvicorn.error").warning("PDF conversion unavailable (%s). Install LibreOffice or MS Word for exact PDFs.", e)
+            log.warning("PDF conversion unavailable (%s). Using basic fallback PDF.", e)
             return None
 
 def basic_pdf(letter, template, sigs) -> bytes:

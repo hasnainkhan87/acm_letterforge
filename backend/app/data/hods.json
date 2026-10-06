@@ -1,0 +1,21 @@
+[
+  {"name": "Dr Raju K", "dept": "CSE"},
+  {"name": "Dr Ashwini B", "dept": "ISE"},
+  {"name": "Dr Venugopala P S", "dept": "AI&DS"},
+  {"name": "Dr Sharada U Shenoy", "dept": "AI&ML"},
+  {"name": "Dr Radhakrishna", "dept": "CCE"},
+  {"name": "Dr Roshan Fernandes", "dept": "Cyber Security"},
+  {"name": "Dr Veena Devi Shastrimath V.", "dept": "ECE"},
+  {"name": "Dr Rajalakshmi Samaga B L", "dept": "EEE"},
+  {"name": "Dr Srinivasa Pai P", "dept": "Mechanical Engineering"},
+  {"name": "Dr Bhojaraj B E", "dept": "Civil Engineering"},
+  {"name": "Dr Vidya S M", "dept": "Biotechnology Engineering"},
+  {"name": "Dr Muralidhara", "dept": "Robotics & AI"},
+  {"name": "Dr Mamatha Balipa", "dept": "MCA"},
+  {"name": "Dr Raghavendra Bairy", "dept": "Physics"},
+  {"name": "Dr Aarti S Bhatt", "dept": "Chemistry"},
+  {"name": "Dr Vishwanatha", "dept": "Humanities"},
+  {"name": "Dr Vasanth K R", "dept": "Mathematics"},
+  {"name": "Dr Durga Prasad", "dept": "E&C (ACT)"},
+  {"name": "Dr Sushma P S", "dept": "VLSI"}
+]

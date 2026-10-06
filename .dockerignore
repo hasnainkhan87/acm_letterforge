@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+**/node_modules
+**/venv
+**/.venv
+**/__pycache__
+**/*.pyc
+**/*.db
+frontend/dist
+backend/storage/signatures
+backend/storage/generated
+*.zip
+*.md
+scripts

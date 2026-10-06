@@ -1,7 +1,13 @@
 .env
+.env.*
+!.env.example
 venv/
+.venv/
 __pycache__/
 node_modules/
 dist/
 *.db
+*.db-journal
 backend/storage/signatures/
+backend/storage/generated/
+*.zip

@@ -2,6 +2,7 @@ import io, uuid
 from PIL import Image
 from .storage_service import storage
 
+Image.MAX_IMAGE_PIXELS = 25_000_000  # reject decompression bombs
 ALLOWED = {"PNG": "png", "JPEG": "jpg"}
 
 def save_signature(data: bytes) -> str:

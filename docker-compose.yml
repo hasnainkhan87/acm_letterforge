@@ -1,12 +1,24 @@
+# Single-instance deployment. SQLite + local files => run exactly ONE container against /data.
 services:
-  backend:
-    build: ./backend
-    env_file: .env
-    ports: ["8000:8000"]
-    volumes: ["./data:/app/storage", "./backend:/app"]
-  frontend:
-    build: ./frontend
-    ports: ["5173:5173"]
-    volumes: ["./frontend/src:/app/src"]
-    environment: [VITE_API_TARGET=http://backend:8000]
-    depends_on: [backend]
+  letterforge:
+    build: .
+    image: letterforge:latest
+    container_name: letterforge
+    init: true
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: sqlite:////data/letterforge.db
+      STORAGE_DIR: /data/storage
+    ports:
+      # Localhost only: the public entry point is Caddy (HTTPS) on the VM. Set BIND_ADDR=0.0.0.0 to test from a phone on your LAN.
+      - "${BIND_ADDR:-127.0.0.1}:8000:8000"
+    volumes:
+      # DATA_DIR=/opt/letterforge-data (host folder, recommended on the VM) or unset for a local named volume.
+      - ${DATA_DIR:-letterforge_data}:/data
+    stop_grace_period: 20s
+
+volumes:
+  letterforge_data:

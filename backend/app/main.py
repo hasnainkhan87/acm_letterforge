@@ -5,10 +5,22 @@ from sqlalchemy.orm import Session
 from . import models, schemas
 from .services import ai_service as ai, document_service, template_service, signature_service
 from .db import Base, engine, get_db, SessionLocal
+from .config import settings
 from .services.storage_service import storage
 
 app = FastAPI(title="LetterForge")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=settings.cors_list, allow_methods=["*"], allow_headers=["*"])  # never "*"
+
+async def read_limited(f: UploadFile, max_mb: int | None = None) -> bytes:
+    """Read an upload but refuse anything above the size limit."""
+    mb = max_mb or settings.max_upload_mb
+    data = await f.read(mb * 1024 * 1024 + 1)
+    if len(data) > mb * 1024 * 1024: raise HTTPException(413, f"File too large (max {mb} MB)")
+    return data
+
+@app.get("/health", include_in_schema=False)
+def health():
+    return {"status": "ok"}  # deliberately independent of Groq, LibreOffice and the database
 
 @app.on_event("startup")
 def startup():
@@ -29,7 +41,10 @@ def list_templates(db: Session = Depends(get_db)):
 
 @app.post("/api/templates", response_model=schemas.TemplateOut)
 async def upload_template(name: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
-    data = await file.read()
+    if not (file.filename or "").lower().endswith(".docx"): raise HTTPException(400, "Template must be a .docx file")
+    name = name.strip()[:100]
+    if not name: raise HTTPException(400, "Template name required")
+    data = await read_limited(file)
     try: template_service.validate_upload(data)
     except Exception as e: raise HTTPException(400, str(e))
     key = storage.save(f"templates/{uuid.uuid4().hex}.docx", data)
@@ -42,7 +57,7 @@ def list_sigs(db: Session = Depends(get_db)):
 
 async def _save_sig(s: models.Signatory, image: UploadFile | None):
     if image:
-        try: new = signature_service.save_signature(await image.read())
+        try: new = signature_service.save_signature(await read_limited(image, 5))
         except ValueError as e: raise HTTPException(400, str(e))
         signature_service.delete_signature(s.signature_path); s.signature_path = new
 
@@ -111,6 +126,7 @@ from .config import settings
 
 @app.get("/api/files/{key:path}")
 def get_file(key: str):
+    if not key.startswith("signatures/"): raise HTTPException(404)  # only signature images are served; templates stay private
     root = Path(settings.storage_dir).resolve(); p = (root / key).resolve()
     if root not in p.parents or not p.is_file(): raise HTTPException(404)
     return FileResponse(p)
@@ -171,9 +187,11 @@ def del_contact(cid: int, db: Session = Depends(get_db)):
 # ---- Optional password (HTTP Basic) for when the app is hosted online
 import base64, secrets
 
+PUBLIC_PATHS = {"/health", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"}  # health probe + PWA assets (browsers fetch these without credentials)
+
 @app.middleware("http")
 async def basic_auth(request, call_next):
-    if settings.app_password:
+    if settings.app_password and request.url.path not in PUBLIC_PATHS:
         ok = False
         h = request.headers.get("authorization", "")
         if h.startswith("Basic "):
