@@ -32,6 +32,8 @@ export const api = {
     return { url: URL.createObjectURL(await r.blob()), exact: r.headers.get("X-PDF-Fidelity") === "exact" };
   },
   letters: () => req<Letter[]>("/api/letters"),
+  deleteLetter: (id: number) => req<unknown>(`/api/letters/${id}`, { method: "DELETE" }),
+  deleteAllLetters: () => req<unknown>("/api/letters", { method: "DELETE" }),
   exportUrl: (id: number, fmt: "pdf" | "docx") => `/api/letters/${id}/export?format=${fmt}`,
   fileUrl: (key: string) => `/api/files/${key}`,
 };

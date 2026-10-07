@@ -105,6 +105,16 @@ def save_letter(body: schemas.LetterIn, db: Session = Depends(get_db)):
 def list_letters(db: Session = Depends(get_db)):
     return db.query(models.Letter).order_by(models.Letter.created_at.desc()).all()
 
+@app.delete("/api/letters/{lid}")
+def delete_letter(lid: int, db: Session = Depends(get_db)):
+    l = db.get(models.Letter, lid)
+    if not l: raise HTTPException(404, "Letter not found")
+    db.delete(l); db.commit(); return {"ok": True}
+
+@app.delete("/api/letters")
+def delete_all_letters(db: Session = Depends(get_db)):
+    n = db.query(models.Letter).delete(); db.commit(); return {"ok": True, "deleted": n}
+
 @app.get("/api/letters/{lid}/export")
 def export(lid: int, format: str = "pdf", db: Session = Depends(get_db)):
     l = db.get(models.Letter, lid)
